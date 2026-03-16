@@ -421,6 +421,12 @@ th {
 }
 
 @media (max-width: 840px) {
+  .mobile-sidebar-toggle {
+    display: block;
+  }
+}
+
+@media (max-width: 840px) {
   .sidebar {
     padding-bottom: 0;
   }
