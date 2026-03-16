@@ -304,7 +304,7 @@ function syncMobileSidebarToggle() {
     return;
   }
 
-  const isMobile = window.innerWidth <= 1180;
+  const isMobile = window.innerWidth <= 1180 || window.matchMedia("(pointer: coarse)").matches;
   if (!isMobile) {
     mobileSidebar.classList.remove("mobile-collapsed");
     mobileSidebarToggleBtn.hidden = true;
@@ -327,7 +327,7 @@ function setupMobileSidebarToggle() {
     return;
   }
 
-  if (window.innerWidth <= 1180) {
+  if (window.innerWidth <= 1180 || window.matchMedia("(pointer: coarse)").matches) {
     mobileSidebar.classList.add("mobile-collapsed");
   }
 
