@@ -295,6 +295,11 @@ function setupMenu() {
           }
         }
       }
+      // Siempre ocultar menú tras seleccionar herramienta en móvil
+      if (window.innerWidth <= 840 && mobileSidebar) {
+        mobileSidebar.classList.add("mobile-collapsed");
+        syncMobileSidebarToggle();
+      }
     });
   });
 }

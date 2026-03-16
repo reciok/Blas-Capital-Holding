@@ -508,27 +508,26 @@ th {
 }
 
 @media (max-width: 480px) {
-  .brand {
-    padding: 0.75rem 0.75rem 0.55rem;
-  }
-
-  .brand h1 {
-    font-size: 1rem;
-    letter-spacing: 0.02rem;
-  }
-
   .tool-menu {
-    padding: 0.4rem 0.5rem 0.6rem;
-    gap: 0.3rem;
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+    padding: 0.5rem 0.65rem 0.75rem;
+    overflow: visible !important;
+    max-height: none !important;
   }
 
   .menu-item {
-    font-size: 0.8rem;
-    min-height: 38px;
-    padding: 0.45rem 0.7rem;
+    white-space: normal;
+    text-align: left;
+    min-height: 40px;
+    border-radius: 10px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.95rem;
+    line-height: 1.2;
   }
 
-  .main-content {
-    padding: 0.5rem;
+  .menu-item.active {
+    transform: none;
   }
-}
+  }
