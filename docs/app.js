@@ -271,34 +271,20 @@ function setupMenu() {
       buttons.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
 
-      // En móvil/tablet, centrar el botón activo en el menú horizontal
-      const menu = document.getElementById("toolMenu");
-      if (menu) {
-        const btnLeft = btn.offsetLeft;
-        const btnWidth = btn.offsetWidth;
-        const menuWidth = menu.offsetWidth;
-        menu.scrollTo({ left: btnLeft - menuWidth / 2 + btnWidth / 2, behavior: "smooth" });
-      }
-
       document.querySelectorAll(".tool-section").forEach((section) => {
         section.classList.remove("active");
       });
       const section = document.getElementById(btn.dataset.target);
       if (section) {
         section.classList.add("active");
-        // En móvil, hacer scroll al inicio del contenido principal
-        if (window.innerWidth <= 1180) {
+        // En móvil, hacer scroll al contenido y contraer el listado.
+        if (window.innerWidth <= 1180 || window.matchMedia("(pointer: coarse)").matches) {
           section.scrollIntoView({ behavior: "smooth", block: "start" });
           if (mobileSidebar) {
             mobileSidebar.classList.add("mobile-collapsed");
             syncMobileSidebarToggle();
           }
         }
-      }
-      // Siempre ocultar menú tras seleccionar herramienta en móvil
-      if (window.innerWidth <= 840 && mobileSidebar) {
-        mobileSidebar.classList.add("mobile-collapsed");
-        syncMobileSidebarToggle();
       }
     });
   });
