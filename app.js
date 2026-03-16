@@ -2,6 +2,9 @@ const state = {
   mortgageSchedule: []
 };
 
+let mobileSidebar = null;
+let mobileSidebarToggleBtn = null;
+
 const money = new Intl.NumberFormat("es-ES", {
   style: "currency",
   currency: "EUR",
@@ -286,10 +289,55 @@ function setupMenu() {
         // En móvil, hacer scroll al inicio del contenido principal
         if (window.innerWidth <= 1180) {
           section.scrollIntoView({ behavior: "smooth", block: "start" });
+          if (mobileSidebar) {
+            mobileSidebar.classList.add("mobile-collapsed");
+            syncMobileSidebarToggle();
+          }
         }
       }
     });
   });
+}
+
+function syncMobileSidebarToggle() {
+  if (!mobileSidebar || !mobileSidebarToggleBtn) {
+    return;
+  }
+
+  const isMobile = window.innerWidth <= 1180;
+  if (!isMobile) {
+    mobileSidebar.classList.remove("mobile-collapsed");
+    mobileSidebarToggleBtn.hidden = true;
+    mobileSidebarToggleBtn.setAttribute("aria-expanded", "true");
+    mobileSidebarToggleBtn.textContent = "Ocultar herramientas ▲";
+    return;
+  }
+
+  mobileSidebarToggleBtn.hidden = false;
+  const isCollapsed = mobileSidebar.classList.contains("mobile-collapsed");
+  mobileSidebarToggleBtn.setAttribute("aria-expanded", String(!isCollapsed));
+  mobileSidebarToggleBtn.textContent = isCollapsed ? "Mostrar herramientas ▼" : "Ocultar herramientas ▲";
+}
+
+function setupMobileSidebarToggle() {
+  mobileSidebar = document.querySelector(".sidebar");
+  mobileSidebarToggleBtn = document.getElementById("mobileSidebarToggle");
+
+  if (!mobileSidebar || !mobileSidebarToggleBtn) {
+    return;
+  }
+
+  if (window.innerWidth <= 1180) {
+    mobileSidebar.classList.add("mobile-collapsed");
+  }
+
+  mobileSidebarToggleBtn.addEventListener("click", () => {
+    mobileSidebar.classList.toggle("mobile-collapsed");
+    syncMobileSidebarToggle();
+  });
+
+  window.addEventListener("resize", syncMobileSidebarToggle);
+  syncMobileSidebarToggle();
 }
 
 function setupSidebarScrollControls() {
@@ -676,6 +724,7 @@ function bindEvents() {
 
 function boot() {
   loadLocal();
+  setupMobileSidebarToggle();
   setupMenu();
   setupSidebarScrollControls();
   bindEvents();

@@ -59,6 +59,25 @@ h4 {
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.mobile-sidebar-toggle {
+  display: none;
+  width: calc(100% - 1.2rem);
+  margin: 0.7rem 0.6rem 0.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #eef7ff;
+  font-family: "IBM Plex Sans", sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.62rem 0.7rem;
+  cursor: pointer;
+}
+
+.mobile-sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
 .sidebar::-webkit-scrollbar {
   width: 0;
   height: 0;
@@ -334,6 +353,20 @@ th {
     overflow: visible;
     border-right: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .mobile-sidebar-toggle {
+    display: block;
+  }
+
+  .sidebar.mobile-collapsed .brand,
+  .sidebar.mobile-collapsed .tool-menu,
+  .sidebar.mobile-collapsed .sidebar-scroll-controls {
+    display: none;
+  }
+
+  .sidebar.mobile-collapsed {
+    overflow: hidden;
   }
 
   .brand {
