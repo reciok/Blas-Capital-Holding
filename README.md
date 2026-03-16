@@ -1,1 +1,0 @@
-# Blas-Capital-Holding
