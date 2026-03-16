@@ -4,6 +4,7 @@ const state = {
 
 let mobileSidebar = null;
 let mobileSidebarToggleBtn = null;
+let mobileToolMenu = null;
 
 const money = new Intl.NumberFormat("es-ES", {
   style: "currency",
@@ -280,11 +281,12 @@ function setupMenu() {
         // En móvil, hacer scroll al contenido y contraer el listado.
         if (window.innerWidth <= 1180 || window.matchMedia("(pointer: coarse)").matches) {
           section.scrollIntoView({ behavior: "smooth", block: "start" });
-          if (mobileSidebar) {
-            mobileSidebar.classList.add("mobile-collapsed");
-            syncMobileSidebarToggle();
-          }
         }
+      }
+
+      if (mobileSidebar && (window.innerWidth <= 1180 || window.matchMedia("(pointer: coarse)").matches)) {
+        mobileSidebar.classList.add("mobile-collapsed");
+        syncMobileSidebarToggle();
       }
     });
   });
@@ -298,6 +300,9 @@ function syncMobileSidebarToggle() {
   const isMobile = window.innerWidth <= 1180 || window.matchMedia("(pointer: coarse)").matches;
   if (!isMobile) {
     mobileSidebar.classList.remove("mobile-collapsed");
+    if (mobileToolMenu) {
+      mobileToolMenu.style.display = "";
+    }
     mobileSidebarToggleBtn.hidden = true;
     mobileSidebarToggleBtn.setAttribute("aria-expanded", "true");
     mobileSidebarToggleBtn.textContent = "Ocultar herramientas ▲";
@@ -306,6 +311,9 @@ function syncMobileSidebarToggle() {
 
   mobileSidebarToggleBtn.hidden = false;
   const isCollapsed = mobileSidebar.classList.contains("mobile-collapsed");
+  if (mobileToolMenu) {
+    mobileToolMenu.style.display = isCollapsed ? "none" : "grid";
+  }
   mobileSidebarToggleBtn.setAttribute("aria-expanded", String(!isCollapsed));
   mobileSidebarToggleBtn.textContent = isCollapsed ? "Mostrar herramientas ▼" : "Ocultar herramientas ▲";
 }
@@ -313,6 +321,7 @@ function syncMobileSidebarToggle() {
 function setupMobileSidebarToggle() {
   mobileSidebar = document.querySelector(".sidebar");
   mobileSidebarToggleBtn = document.getElementById("mobileSidebarToggle");
+  mobileToolMenu = document.getElementById("toolMenu");
 
   if (!mobileSidebar || !mobileSidebarToggleBtn) {
     return;

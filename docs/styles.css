@@ -403,6 +403,10 @@ th {
   }
 
   /* Contraído: ocultar herramientas, mantener visible cabecera y flecha. */
+  .sidebar.mobile-collapsed .brand {
+    display: block !important;
+  }
+
   .sidebar.mobile-collapsed .tool-menu,
   .sidebar.mobile-collapsed .sidebar-scroll-controls {
     display: none !important;
