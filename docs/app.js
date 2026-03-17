@@ -5,6 +5,35 @@ const state = {
 let mobileSidebar = null;
 let mobileSidebarToggleBtn = null;
 let mobileToolMenu = null;
+let historicalModulePromise = null;
+
+function setHistoricalModuleState(state, message = "") {
+  const root = document.getElementById("historicalDataModule");
+  if (!root) {
+    return;
+  }
+
+  if (state === "ready") {
+    return;
+  }
+
+  const templates = {
+    loading: `
+      <div class="hd-state-card hd-panel">
+        <div class="hd-loader"></div>
+        <p>Cargando Datos Históricos...</p>
+      </div>
+    `,
+    error: `
+      <div class="hd-state-card hd-panel is-error">
+        <h4>No se pudo cargar el módulo</h4>
+        <p>${message || "Se produjo un error al inicializar Datos Históricos."}</p>
+      </div>
+    `
+  };
+
+  root.innerHTML = templates[state] || "";
+}
 
 const money = new Intl.NumberFormat("es-ES", {
   style: "currency",
@@ -268,7 +297,7 @@ function loadLocal() {
 function setupMenu() {
   const buttons = [...document.querySelectorAll(".menu-item")];
   buttons.forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       buttons.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
 
@@ -278,6 +307,9 @@ function setupMenu() {
       const section = document.getElementById(btn.dataset.target);
       if (section) {
         section.classList.add("active");
+        if (btn.dataset.target === "historical-data") {
+          await loadHistoricalDataModule();
+        }
         // En móvil, hacer scroll al contenido y contraer el listado.
         if (window.innerWidth <= 1180 || window.matchMedia("(pointer: coarse)").matches) {
           section.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -290,6 +322,51 @@ function setupMenu() {
       }
     });
   });
+}
+
+function loadModuleScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[type="module"][src="${src}"]`);
+    if (existing) {
+      if (existing.dataset.loaded === "true") {
+        resolve();
+        return;
+      }
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error(`No se pudo cargar ${src}`)), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = src;
+    script.addEventListener("load", () => {
+      script.dataset.loaded = "true";
+      resolve();
+    }, { once: true });
+    script.addEventListener("error", () => reject(new Error(`No se pudo cargar ${src}`)), { once: true });
+    document.body.appendChild(script);
+  });
+}
+
+async function loadHistoricalDataModule() {
+  if (historicalModulePromise) {
+    return historicalModulePromise;
+  }
+
+  historicalModulePromise = (async () => {
+    setHistoricalModuleState("loading");
+    await loadModuleScript("historical-data/main.js");
+    setHistoricalModuleState("ready");
+  })();
+
+  try {
+    await historicalModulePromise;
+  } catch (error) {
+    historicalModulePromise = null;
+    setHistoricalModuleState("error", error instanceof Error ? error.message : String(error));
+    throw error;
+  }
 }
 
 function syncMobileSidebarToggle() {
@@ -729,22 +806,31 @@ function boot() {
   setupSidebarScrollControls();
   bindEvents();
 
-  // Ejecutamos una primera pasada para mostrar resultados iniciales.
+  // Solo calculamos la portada al inicio; el resto se difiere para no bloquear el primer render.
   runCompound();
-  runMortgage();
-  runLoan();
-  runLoanCompare();
-  runInvestment();
-  runInvestmentCompare();
-  runNpvIrr();
-  runCashflow();
-  runRealEstate();
-  runDca();
-  runRetirement();
-  runConverterMonthlyAnnual();
-  runConverterNomEff();
-  runRisk();
-  runScenarios();
+
+  const runDeferredCalculations = () => {
+    runMortgage();
+    runLoan();
+    runLoanCompare();
+    runInvestment();
+    runInvestmentCompare();
+    runNpvIrr();
+    runCashflow();
+    runRealEstate();
+    runDca();
+    runRetirement();
+    runConverterMonthlyAnnual();
+    runConverterNomEff();
+    runRisk();
+    runScenarios();
+  };
+
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(runDeferredCalculations, { timeout: 1200 });
+  } else {
+    window.setTimeout(runDeferredCalculations, 120);
+  }
 }
 
 window.addEventListener("DOMContentLoaded", boot);
