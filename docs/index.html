@@ -70,17 +70,49 @@
 
       <section id="mortgage" class="tool-section">
         <h3>Calculadora de hipoteca (sistema francés)</h3>
-        <div class="tool-grid">
+        <div class="tool-grid two-cols">
           <div class="card form-card">
-            <label>Capital (€)
-              <input id="mortgagePrincipal" type="number" min="0" value="180000" />
-            </label>
-            <label>Interés anual (%)
-              <input id="mortgageRate" type="number" step="0.01" value="3.2" />
-            </label>
-            <label>Plazo (años)
-              <input id="mortgageYears" type="number" min="1" value="30" />
-            </label>
+            <h4>Datos base</h4>
+            <div class="mini-grid mortgage-input-grid">
+              <label>Capital (€)
+                <input id="mortgagePrincipal" type="number" min="0" value="180000" />
+              </label>
+              <label>Interés anual (%)
+                <input id="mortgageRate" type="number" step="0.01" value="3.2" />
+              </label>
+              <label>Plazo (años)
+                <input id="mortgageYears" type="number" min="1" value="30" />
+              </label>
+            </div>
+
+            <h4>Amortización anticipada</h4>
+            <div class="mini-grid mortgage-input-grid">
+              <label>Extra mensual (€)
+                <input id="mortgageExtraMonthly" type="number" min="0" value="0" />
+              </label>
+              <label>Amortización puntual (€)
+                <input id="mortgageExtraLump" type="number" min="0" value="0" />
+              </label>
+              <label>Mes de la puntual
+                <input id="mortgageExtraLumpMonth" type="number" min="1" value="12" />
+              </label>
+            </div>
+
+            <h4>Costes asociados</h4>
+            <div class="mini-grid mortgage-input-grid">
+              <label>Comisión apertura (%)
+                <input id="mortgageFeePct" type="number" min="0" step="0.01" value="1" />
+              </label>
+              <label>Comisión fija (€)
+                <input id="mortgageFeeFixed" type="number" min="0" value="500" />
+              </label>
+              <label>Seguro mensual (€)
+                <input id="mortgageInsuranceMonthly" type="number" min="0" value="40" />
+              </label>
+              <label>Impuestos iniciales (%)
+                <input id="mortgageTaxPct" type="number" min="0" step="0.01" value="1.5" />
+              </label>
+            </div>
             <button id="mortgageBtn" class="action-btn">Calcular hipoteca</button>
           </div>
           <div class="card result-card">
@@ -88,11 +120,44 @@
             <div class="table-wrap">
               <table id="mortgageTable">
                 <thead>
-                  <tr><th>Mes</th><th>Cuota</th><th>Interés</th><th>Amortización</th><th>Saldo</th></tr>
+                  <tr><th>Mes</th><th>Cuota</th><th>Interés</th><th>Amortización</th><th>Extra</th><th>Saldo</th></tr>
                 </thead>
                 <tbody></tbody>
               </table>
             </div>
+          </div>
+          <div class="card form-card">
+            <h4>Comparador de dos hipotecas</h4>
+            <div class="mortgage-compare-grid">
+              <div class="mortgage-scenario">
+                <h5>Hipoteca A</h5>
+                <div class="mini-grid mortgage-input-grid">
+                  <label>Capital<input id="mortgageAPrincipal" type="number" min="0" value="180000" /></label>
+                  <label>Interés %<input id="mortgageARate" type="number" min="0" step="0.01" value="3.1" /></label>
+                  <label>Años<input id="mortgageAYears" type="number" min="1" value="30" /></label>
+                  <label>Apertura %<input id="mortgageAFeePct" type="number" min="0" step="0.01" value="1" /></label>
+                  <label>Seguro mes<input id="mortgageAInsuranceMonthly" type="number" min="0" value="40" /></label>
+                  <label>Impuestos %<input id="mortgageATaxPct" type="number" min="0" step="0.01" value="1.5" /></label>
+                  <label>Extra mes<input id="mortgageAExtraMonthly" type="number" min="0" value="0" /></label>
+                </div>
+              </div>
+              <div class="mortgage-scenario">
+                <h5>Hipoteca B</h5>
+                <div class="mini-grid mortgage-input-grid">
+                  <label>Capital<input id="mortgageBPrincipal" type="number" min="0" value="180000" /></label>
+                  <label>Interés %<input id="mortgageBRate" type="number" min="0" step="0.01" value="2.8" /></label>
+                  <label>Años<input id="mortgageBYears" type="number" min="1" value="30" /></label>
+                  <label>Apertura %<input id="mortgageBFeePct" type="number" min="0" step="0.01" value="0.5" /></label>
+                  <label>Seguro mes<input id="mortgageBInsuranceMonthly" type="number" min="0" value="50" /></label>
+                  <label>Impuestos %<input id="mortgageBTaxPct" type="number" min="0" step="0.01" value="1.5" /></label>
+                  <label>Extra mes<input id="mortgageBExtraMonthly" type="number" min="0" value="0" /></label>
+                </div>
+              </div>
+            </div>
+            <button id="mortgageCompareBtn" class="action-btn">Comparar hipotecas</button>
+          </div>
+          <div class="card result-card">
+            <div id="mortgageCompareResult" class="result"></div>
           </div>
         </div>
       </section>
@@ -219,6 +284,25 @@
             </label>
             <label>Deuda anual (hipoteca u otras)
               <input id="reDebt" type="number" value="5400" />
+            </label>
+            <h4>Hipoteca pendiente</h4>
+            <div class="mini-grid">
+              <label>Capital pendiente (€)
+                <input id="reMortgagePrincipal" type="number" min="0" value="120000" />
+              </label>
+              <label>Interés anual (%)
+                <input id="reMortgageRate" type="number" min="0" step="0.01" value="3" />
+              </label>
+              <label>Años restantes
+                <input id="reMortgageYears" type="number" min="1" value="22" />
+              </label>
+              <label>% de cashflow neto a reinvertir
+                <input id="reReinvestPct" type="number" min="0" max="100" step="1" value="100" />
+              </label>
+            </div>
+            <label class="check-label">
+              <input id="reReinvestNet" type="checkbox" checked />
+              Reinvertir cashflow neto para amortizar hipoteca
             </label>
             <label>Revalorización anual esperada (%)
               <input id="reAppreciation" type="number" step="0.1" value="2.5" />

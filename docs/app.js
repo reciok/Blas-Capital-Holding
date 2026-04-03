@@ -50,6 +50,11 @@ function n(id) {
   return Number(document.getElementById(id).value) || 0;
 }
 
+function checked(id) {
+  const el = document.getElementById(id);
+  return Boolean(el && el.checked);
+}
+
 function txt(id) {
   return document.getElementById(id).value.trim();
 }
@@ -219,6 +224,93 @@ function loanFrenchPayment(principal, annualRatePct, years) {
   return { payment, totalPayment, totalInterest, nMonths };
 }
 
+function simulateMortgageScenario({
+  principal,
+  annualRatePct,
+  years,
+  extraMonthly = 0,
+  extraLump = 0,
+  extraLumpMonth = 1,
+  openingFeePct = 0,
+  openingFeeFixed = 0,
+  insuranceMonthly = 0,
+  taxPct = 0
+}) {
+  const safePrincipal = Math.max(0, principal);
+  const safeYears = Math.max(1, years);
+  const safeExtraMonthly = Math.max(0, extraMonthly);
+  const safeExtraLump = Math.max(0, extraLump);
+  const safeExtraLumpMonth = Math.max(1, Math.round(extraLumpMonth));
+  const safeOpeningFeePct = Math.max(0, openingFeePct);
+  const safeOpeningFeeFixed = Math.max(0, openingFeeFixed);
+  const safeInsuranceMonthly = Math.max(0, insuranceMonthly);
+  const safeTaxPct = Math.max(0, taxPct);
+
+  const base = loanFrenchPayment(safePrincipal, annualRatePct, safeYears);
+  const monthlyRate = Math.max(0, annualRatePct) / 100 / 12;
+  const maxMonths = base.nMonths;
+  const schedule = [];
+
+  let balance = safePrincipal;
+  let totalInterest = 0;
+  let totalPaidToBank = 0;
+  let totalInsurance = 0;
+  let totalExtra = 0;
+  let month = 0;
+
+  while (balance > 0.000001 && month < maxMonths + 240) {
+    month += 1;
+    const interest = monthlyRate === 0 ? 0 : balance * monthlyRate;
+    let regularAmortization = Math.max(0, base.payment - interest);
+    regularAmortization = Math.min(regularAmortization, balance);
+
+    let extra = safeExtraMonthly;
+    if (month === safeExtraLumpMonth) {
+      extra += safeExtraLump;
+    }
+
+    const availableForPrincipal = Math.max(0, balance - regularAmortization);
+    const appliedExtra = Math.min(extra, availableForPrincipal);
+    const totalAmortization = regularAmortization + appliedExtra;
+    const payment = interest + totalAmortization;
+
+    balance = Math.max(0, balance - totalAmortization);
+    totalInterest += interest;
+    totalPaidToBank += payment;
+    totalInsurance += safeInsuranceMonthly;
+    totalExtra += appliedExtra;
+
+    schedule.push({
+      month,
+      payment,
+      interest,
+      amortization: totalAmortization,
+      extra: appliedExtra,
+      balance
+    });
+
+    if (month > maxMonths + 240 && balance > 0) {
+      break;
+    }
+  }
+
+  const openingCosts = safePrincipal * (safeOpeningFeePct + safeTaxPct) / 100 + safeOpeningFeeFixed;
+  const totalOutflow = totalPaidToBank + totalInsurance + openingCosts;
+
+  return {
+    paymentBase: base.payment,
+    months: month,
+    totalInterest,
+    totalPaidToBank,
+    totalInsurance,
+    totalExtra,
+    openingCosts,
+    totalOutflow,
+    nMonthsOriginal: base.nMonths,
+    schedule
+  };
+}
+
 function computeNPV(ratePct, cashFlows) {
   const r = ratePct / 100;
   return cashFlows.reduce((acc, cf, t) => acc + cf / Math.pow(1 + r, t), 0);
@@ -271,7 +363,7 @@ function saveLocally() {
   // Persistimos únicamente inputs para recuperar el último estado del usuario.
   const payload = {};
   document.querySelectorAll("input").forEach((input) => {
-    payload[input.id] = input.value;
+    payload[input.id] = input.type === "checkbox" ? input.checked : input.value;
   });
   localStorage.setItem("blas-finance-inputs", JSON.stringify(payload));
 }
@@ -286,7 +378,11 @@ function loadLocal() {
     Object.entries(values).forEach(([id, value]) => {
       const el = document.getElementById(id);
       if (el) {
-        el.value = value;
+        if (el.type === "checkbox") {
+          el.checked = Boolean(value);
+        } else {
+          el.value = value;
+        }
       }
     });
   } catch {
@@ -459,46 +555,102 @@ function runMortgage() {
   const principal = n("mortgagePrincipal");
   const rate = n("mortgageRate");
   const years = n("mortgageYears");
-  const calc = loanFrenchPayment(principal, rate, years);
+  const extraMonthly = n("mortgageExtraMonthly");
+  const extraLump = n("mortgageExtraLump");
+  const extraLumpMonth = n("mortgageExtraLumpMonth");
+  const feePct = n("mortgageFeePct");
+  const feeFixed = n("mortgageFeeFixed");
+  const insuranceMonthly = n("mortgageInsuranceMonthly");
+  const taxPct = n("mortgageTaxPct");
+
+  const baseline = simulateMortgageScenario({
+    principal,
+    annualRatePct: rate,
+    years,
+    openingFeePct: feePct,
+    openingFeeFixed: feeFixed,
+    insuranceMonthly,
+    taxPct
+  });
+
+  const calc = simulateMortgageScenario({
+    principal,
+    annualRatePct: rate,
+    years,
+    extraMonthly,
+    extraLump,
+    extraLumpMonth,
+    openingFeePct: feePct,
+    openingFeeFixed: feeFixed,
+    insuranceMonthly,
+    taxPct
+  });
+
+  const reducedMonths = Math.max(0, baseline.months - calc.months);
+  const reducedYears = reducedMonths / 12;
+  const interestSavings = baseline.totalInterest - calc.totalInterest;
 
   setResult("mortgageResult", [
-    `<strong>Cuota mensual:</strong> ${formatMoney(calc.payment)}`,
+    `<strong>Cuota mensual base:</strong> ${formatMoney(calc.paymentBase)}`,
+    `<strong>Plazo estimado:</strong> ${calc.months} meses (${(calc.months / 12).toFixed(2)} años)`,
+    `<strong>Reducción de plazo por amortización anticipada:</strong> ${reducedMonths} meses (${reducedYears.toFixed(2)} años)`,
+    `<strong>Ahorro de intereses:</strong> ${formatMoney(interestSavings)}`,
     `<strong>Total intereses:</strong> ${formatMoney(calc.totalInterest)}`,
-    `<strong>Total pagado:</strong> ${formatMoney(calc.totalPayment)}`
+    `<strong>Costes iniciales (comisiones + impuestos):</strong> ${formatMoney(calc.openingCosts)}`,
+    `<strong>Seguro total estimado:</strong> ${formatMoney(calc.totalInsurance)}`,
+    `<strong>Desembolso total estimado:</strong> ${formatMoney(calc.totalOutflow)}`
   ]);
 
-  state.mortgageSchedule = [];
+  state.mortgageSchedule = calc.schedule;
   const tbody = document.querySelector("#mortgageTable tbody");
   tbody.innerHTML = "";
 
-  let balance = principal;
-  const i = rate / 100 / 12;
-
-  for (let m = 1; m <= calc.nMonths; m += 1) {
-    const interest = i === 0 ? 0 : balance * i;
-    const amortization = calc.payment - interest;
-    balance = Math.max(0, balance - amortization);
-
-    state.mortgageSchedule.push({
-      month: m,
-      payment: calc.payment,
-      interest,
-      amortization,
-      balance
-    });
-
-    if (m <= 240 || m === calc.nMonths) {
+  calc.schedule.forEach((entry) => {
+    if (entry.month <= 240 || entry.month === calc.months) {
       const row = document.createElement("tr");
       row.innerHTML = `
-        <td>${m}</td>
-        <td>${formatMoney(calc.payment)}</td>
-        <td>${formatMoney(interest)}</td>
-        <td>${formatMoney(amortization)}</td>
-        <td>${formatMoney(balance)}</td>
+        <td>${entry.month}</td>
+        <td>${formatMoney(entry.payment)}</td>
+        <td>${formatMoney(entry.interest)}</td>
+        <td>${formatMoney(entry.amortization)}</td>
+        <td>${formatMoney(entry.extra)}</td>
+        <td>${formatMoney(entry.balance)}</td>
       `;
       tbody.appendChild(row);
     }
-  }
+  });
+}
+
+function runMortgageCompare() {
+  const mortgageA = simulateMortgageScenario({
+    principal: n("mortgageAPrincipal"),
+    annualRatePct: n("mortgageARate"),
+    years: n("mortgageAYears"),
+    extraMonthly: n("mortgageAExtraMonthly"),
+    openingFeePct: n("mortgageAFeePct"),
+    insuranceMonthly: n("mortgageAInsuranceMonthly"),
+    taxPct: n("mortgageATaxPct")
+  });
+
+  const mortgageB = simulateMortgageScenario({
+    principal: n("mortgageBPrincipal"),
+    annualRatePct: n("mortgageBRate"),
+    years: n("mortgageBYears"),
+    extraMonthly: n("mortgageBExtraMonthly"),
+    openingFeePct: n("mortgageBFeePct"),
+    insuranceMonthly: n("mortgageBInsuranceMonthly"),
+    taxPct: n("mortgageBTaxPct")
+  });
+
+  const cheaper = mortgageA.totalOutflow <= mortgageB.totalOutflow ? "A" : "B";
+  const shorter = mortgageA.months <= mortgageB.months ? "A" : "B";
+
+  setResult("mortgageCompareResult", [
+    `<strong>Hipoteca A:</strong> cuota ${formatMoney(mortgageA.paymentBase)} | plazo ${mortgageA.months} meses | intereses ${formatMoney(mortgageA.totalInterest)} | coste total ${formatMoney(mortgageA.totalOutflow)}`,
+    `<strong>Hipoteca B:</strong> cuota ${formatMoney(mortgageB.paymentBase)} | plazo ${mortgageB.months} meses | intereses ${formatMoney(mortgageB.totalInterest)} | coste total ${formatMoney(mortgageB.totalOutflow)}`,
+    `<strong>Más barata (desembolso total):</strong> ${cheaper}`,
+    `<strong>Más rápida (menos meses):</strong> ${shorter}`
+  ]);
 }
 
 function runLoan() {
@@ -600,6 +752,11 @@ function runRealEstate() {
   const occupancy = n("reOccupancy") / 100;
   const expenses = n("reExpenses");
   const debt = n("reDebt");
+  const mortgagePrincipal = n("reMortgagePrincipal");
+  const mortgageRate = n("reMortgageRate");
+  const mortgageYears = n("reMortgageYears");
+  const reinvestPct = Math.max(0, Math.min(100, n("reReinvestPct"))) / 100;
+  const shouldReinvest = checked("reReinvestNet");
   const appreciation = n("reAppreciation") / 100;
   const years = n("reYears");
 
@@ -611,12 +768,62 @@ function runRealEstate() {
   const annualCashflow = noi - debt;
   const futureValue = value * Math.pow(1 + appreciation, years);
 
+  let reinvestLines = ["<strong>Reinversión:</strong> desactivada"]; 
+
+  if (shouldReinvest && annualCashflow > 0 && mortgagePrincipal > 0 && mortgageYears > 0) {
+    const annualReinvestment = annualCashflow * reinvestPct;
+    const monthlyExtra = annualReinvestment / 12;
+
+    const baseline = simulateMortgageScenario({
+      principal: mortgagePrincipal,
+      annualRatePct: mortgageRate,
+      years: mortgageYears
+    });
+
+    const withReinvestment = simulateMortgageScenario({
+      principal: mortgagePrincipal,
+      annualRatePct: mortgageRate,
+      years: mortgageYears,
+      extraMonthly: monthlyExtra
+    });
+
+    const monthsSaved = Math.max(0, baseline.months - withReinvestment.months);
+    const baselinePayment = baseline.paymentBase;
+
+    const nMonths = Math.max(1, Math.round(mortgageYears * 12));
+    const i = Math.max(0, mortgageRate) / 100 / 12;
+
+    let oneYearBalance = mortgagePrincipal;
+    const firstYearMonths = Math.min(12, nMonths);
+    for (let month = 0; month < firstYearMonths; month += 1) {
+      const interest = i === 0 ? 0 : oneYearBalance * i;
+      const amortization = Math.min(oneYearBalance, Math.max(0, baselinePayment - interest));
+      oneYearBalance = Math.max(0, oneYearBalance - amortization);
+    }
+
+    const reducedBalanceAfterYearOne = Math.max(0, oneYearBalance - annualReinvestment);
+    const remainingYears = Math.max(1 / 12, mortgageYears - firstYearMonths / 12);
+    const recastPayment = loanFrenchPayment(reducedBalanceAfterYearOne, mortgageRate, remainingYears).payment;
+    const paymentReduction = Math.max(0, baselinePayment - recastPayment);
+
+    reinvestLines = [
+      `<strong>Reinversión anual aplicada:</strong> ${formatMoney(annualReinvestment)}`,
+      `<strong>Si reinviertes para reducir tiempo:</strong> ${monthsSaved} meses menos (${(monthsSaved / 12).toFixed(2)} años)`,
+      `<strong>Si reinviertes para reducir cuota:</strong> ahorro aprox. ${formatMoney(paymentReduction)} al mes (desde año 2)`
+    ];
+  } else if (shouldReinvest) {
+    reinvestLines = [
+      "<strong>Reinversión:</strong> activa, pero falta cashflow neto positivo o datos de hipoteca pendiente para simular."
+    ];
+  }
+
   setResult("reResult", [
     `<strong>Cap rate:</strong> ${formatPct(capRate)}`,
     `<strong>Rentabilidad bruta:</strong> ${formatPct(grossYield)}`,
     `<strong>Rentabilidad neta:</strong> ${formatPct(netYield)}`,
     `<strong>Cashflow anual:</strong> ${formatMoney(annualCashflow)}`,
-    `<strong>Valor proyectado (${years} años):</strong> ${formatMoney(futureValue)}`
+    `<strong>Valor proyectado (${years} años):</strong> ${formatMoney(futureValue)}`,
+    ...reinvestLines
   ]);
 }
 
@@ -733,6 +940,11 @@ function bindEvents() {
     saveLocally();
   });
 
+  document.getElementById("mortgageCompareBtn").addEventListener("click", () => {
+    runMortgageCompare();
+    saveLocally();
+  });
+
   document.getElementById("loanBtn").addEventListener("click", () => {
     runLoan();
     saveLocally();
@@ -811,6 +1023,7 @@ function boot() {
 
   const runDeferredCalculations = () => {
     runMortgage();
+    runMortgageCompare();
     runLoan();
     runLoanCompare();
     runInvestment();
